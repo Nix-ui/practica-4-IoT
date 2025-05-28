@@ -1,9 +1,9 @@
-import { DateTime } from 'luxon';
+const luxon = require('luxon');
 const AWS = require('aws-sdk');
 const ddb = new AWS.DynamoDB.DocumentClient();
 
-
 const THINGS_STATE_TABLE_NAME = 'IoTDeviceStates';
+
 exports.handler = async (event) => {
     console.log("Evento recibido de IoT Rule:", JSON.stringify(event, null, 2));
     const thingName = event.thingName;
@@ -20,7 +20,7 @@ exports.handler = async (event) => {
             'thingName': thingName,
             'interiorDoor': currentInteriorDoor,
             'exteriorDoor': currentExteriorDoor,
-            'lastUpdated': DateTime.local().setZone('America/La_Paz').toFormat("yyyy-MM-dd'T'HH:mm:ssZZ")
+            'lastLinked': luxon.DateTime.local().setZone('America/La_Paz').toFormat("yyyy-MM-dd'T'HH:mm:ssZZ")
         }
     };
 

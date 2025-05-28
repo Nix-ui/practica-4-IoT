@@ -3,3 +3,5 @@ backendAlexa/backendAlexa.zip
 lambda Dynamo/node_modules
 lambda Dynamo/lambda Dynamo.zip
 lambda republish/node_modules
+EspSensor/include/certificates.h
+EspActuator/include/certificates.h

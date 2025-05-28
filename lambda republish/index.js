@@ -5,6 +5,17 @@ const iotData = new AWS.IotData({
     endpoint: 'a2rmxu7hc5rdsd-ats.iot.us-east-2.amazonaws.com',
     region: 'us-east-2'});
 
+
+//Handler for AWS Lambda function triggered by IoT Rule
+// Updates the Shadow of an IoT device when the Rule is triggered  checking the payload received
+/**
+ * @description AWS Lambda function to update the Shadow of an IoT device
+ * @param {Object} event - The event object containing the IoT Rule data
+ * @param {string} event.thingName - The name of the IoT device (thing)
+ * @param {Object} event.payload - The desired state to update in the Shadow
+ * @return {Object} - The response object containing the status code and message
+ * @throws {Error} - If there is an error updating the Shadow
+ */
 exports.handler = async (event) => {
     console.log("Evento recibido en ShadowUpdaterLambda:", JSON.stringify(event, null, 2));
 

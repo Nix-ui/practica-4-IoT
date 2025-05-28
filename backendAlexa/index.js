@@ -6,9 +6,16 @@ const IotData = new AWS.IotData({endpoint: 'a2rmxu7hc5rdsd-ats.iot.us-east-2.ama
 const iot = new AWS.Iot({region: 'us-east-2'});
 const ddb = new AWS.DynamoDB.DocumentClient();
 
-const USERS_TABLE_NAME = 'IoTThingUsers';
-const THINGS_STATE_TABLE_NAME = 'IoTDeviceStates';
+// Name of the DynamoDB tables 
+const USERS_TABLE_NAME = 'IoTThingUsers'; // Table to store userID and their thingName and their linked IoT devices when they were last linked date.
+const THINGS_STATE_TABLE_NAME = 'IoTDeviceStates'; // Table to store the state of the IoT devices, including their doors and security system states.
 
+// Function to get the thingName associated with a userId
+/**
+ * Retrieves the thingName associated with a userId from the USERS_TABLE_NAME.
+ * @param {string} userId - The userId for which to retrieve the thingName.
+ * @returns {Promise<string|null>} - Returns the thingName if found, otherwise null.
+ */
 async function getThingNameForUser(userId) {
     const params = {
         TableName: USERS_TABLE_NAME,
@@ -29,6 +36,12 @@ async function getThingNameForUser(userId) {
     }
 }
 
+//function to handle the LaunchRequestIntent recieived when the skill is launched with the invocation name
+/**
+ * Handles the LaunchRequest when the skill is invoked.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @returns {Object} - The response to be sent back to the user.
+ */
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
@@ -43,6 +56,12 @@ const LaunchRequestHandler = {
     }
 };
 
+// Handler for the StateExteriorDoorIntent, which checks the state of the exterior door of the IoT device linked to the user, the state is stored in the THINGS_STATE_TABLE_NAME DynamoDB table
+/**
+ * Handles the StateExteriorDoorIntent, which checks the state of the exterior door of the IoT device linked to the user.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @returns {Object} - The response to be sent back to the user.
+ */
 const StateExteriorDoorHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -62,7 +81,7 @@ const StateExteriorDoorHandler = {
 
                 if (data.Item && data.Item.exteriorDoor) {
                     const exteriorDoor = data.Item.exteriorDoor;
-                    const stateDoor = exteriorDoor === "OPEN" ? "Abierta" : "Cerrada";
+                    const stateDoor = exteriorDoor === "open" ? "Abierta" : "Cerrada";
                     speakOutput = `La puerta exterior de tu dispositivo ${thingName} está ${stateDoor}.`;
                 } else {
                     speakOutput = `No tengo información de estado para la puerta exterior de tu dispositivo ${thingName}.`;
@@ -79,6 +98,8 @@ const StateExteriorDoorHandler = {
     }
 };
 
+// Handler for the OpenInteriorDoorIntent, which sends a command to open the interior door of the IoT device linked to the user
+//this command is sent to the AWS IoT Data Plane using the updateThingShadow method and the payload is a JSON string that sets the desired state of the interior door to "open"
 const OpenInteriorDoorIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -93,7 +114,7 @@ const OpenInteriorDoorIntentHandler = {
             try {
                 const OpenInteriorDoorParams = {
                     thingName: thingName,
-                    payload: '{"state": {"desired": {"interiorDoor": "OPEN"}}}',
+                    payload: '{"state": {"desired": {"interiorDoor": "open"}}}',
                 };
                 await IotData.updateThingShadow(OpenInteriorDoorParams).promise();
                 speakOutput = `Solicitaste abrir la puerta interior de tu dispositivo ${thingName}. El dispositivo debería actualizar su estado pronto.`;
@@ -109,6 +130,8 @@ const OpenInteriorDoorIntentHandler = {
     }
 };
 
+// Handler for the CloseInteriorDoorIntent, which sends a command to close the interior door of the IoT device linked to the user
+//this command is sent to the AWS IoT Data Plane using the updateThingShadow method and the payload is a JSON string that sets the desired state of the interior door to "close"
 const CloseInteriorDoorIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -123,7 +146,7 @@ const CloseInteriorDoorIntentHandler = {
             try {
                 const CloseInteriorDoorParams = {
                     thingName: thingName,
-                    payload: '{"state": {"desired": {"interiorDoor": "CLOSE"}}}',
+                    payload: '{"state": {"desired": {"interiorDoor": "close"}}}',
                 };
                 await IotData.updateThingShadow(CloseInteriorDoorParams).promise();
                 speakOutput = `Solicitaste cerrar la puerta interior de tu dispositivo ${thingName}. El dispositivo debería actualizar su estado pronto.`;
@@ -139,6 +162,13 @@ const CloseInteriorDoorIntentHandler = {
     }
 };
 
+// Handler for the StateInteriorDoorIntent, which retrieves the state of the interior door of the IoT device linked to the user
+// the state is stored in the THINGS_STATE_TABLE_NAME DynamoDB table
+/**
+ * Handles the StateInteriorDoorIntent, which retrieves the state of the interior door of the IoT device linked to the user.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @returns {Object} - The response to be sent back to the user.
+ */
 const StateInteriorDoorHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -158,7 +188,7 @@ const StateInteriorDoorHandler = {
 
                 if (data.Item && data.Item.interiorDoor) {
                     const interiorDoor = data.Item.interiorDoor;
-                    const stateDoor = interiorDoor === "OPEN" ? "Abierta" : "Cerrada";
+                    const stateDoor = interiorDoor === "open" ? "Abierta" : "Cerrada";
                     speakOutput = `La puerta interior de tu dispositivo ${thingName} está ${stateDoor}.`;
                 } else {
                     speakOutput = `No tengo información de estado para la puerta interior de tu dispositivo ${thingName}.`;
@@ -175,6 +205,14 @@ const StateInteriorDoorHandler = {
     }
 };
 
+// Handler for the ActivateSecuritySystemIntent, which sends a command to activate the security system of the IoT device linked to the user
+// this command is sent to the AWS IoT Data Plane using the updateThingShadow method and the payload is a JSON string that sets the desired state of the security system to "armed"
+
+/**
+ * Handles the ActivateSecuritySystemIntent, which sends a command to activate the security system of the IoT device linked to the user.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @return {Object} - The response to be sent back to the user.
+ * */
 const ActivateSecuritySystemIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -205,6 +243,12 @@ const ActivateSecuritySystemIntentHandler = {
     }
 };
 
+// Handler for the DeactivateSecuritySystemIntent, which sends a command to deactivate the security system of the IoT device linked to the user
+/**
+ * Handles the DeactivateSecuritySystemIntent, which sends a command to deactivate the security system of the IoT device linked to the user.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @return {Object} - The response to be sent back to the user.
+ * */
 const DeactivateSecuritySystemIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -235,6 +279,12 @@ const DeactivateSecuritySystemIntentHandler = {
     }
 };
 
+// Handler for the LinkThingToUserIntent, which links a thing to the user by saving the thingName in the USERS_TABLE_NAME DynamoDB table
+/**
+ * Handles the LinkThingToUserIntent, which links a thing to the user by saving the thingName in the USERS_TABLE_NAME DynamoDB table.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @return {Object} - The response to be sent back to the user.
+ * */
 const LinkThingToUserIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -284,6 +334,13 @@ const LinkThingToUserIntentHandler = {
             .getResponse();
     }
 };
+
+// Handler for the DiscoverDevicesIntent, which lists all IoT devices registered in the AWS IoT account
+/**
+ * Handles the DiscoverDevicesIntent, which lists all IoT devices registered in the AWS IoT account.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @return {Object} - The response to be sent back to the user. 
+ * */
 const DiscoverDevicesIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -320,6 +377,12 @@ const DiscoverDevicesIntentHandler = {
     }
 };
 
+// Handler for the ListMyDevicesIntent, which lists all devices linked to the user's account
+/**
+ * Handles the ListMyDevicesIntent, which lists all devices linked to the user's account.
+ * @param {Object} handlerInput - The input handler for the request.
+ * @return {Object} - The response to be sent back to the user. 
+ * */
 const ListMyDevicesIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -412,7 +475,7 @@ const ListMyDevicesIntentHandler = {
     }
 };
 
-
+// Handler for the HelpIntent, which provides help information to the user
 const HelpIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -426,7 +489,7 @@ const HelpIntentHandler = {
             .getResponse();
     }
 };
-
+// Handler for the Cancel and Stop Intent
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -441,6 +504,7 @@ const CancelAndStopIntentHandler = {
     }
 };
 
+// Handler for the Fallback Intent, which is triggered when the skill does not understand the user's request
 const FallbackIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -454,7 +518,7 @@ const FallbackIntentHandler = {
             .getResponse();
     }
 };
-
+// Handler for the SessionEndedRequest, which is triggered when the session ends
 const SessionEndedRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
@@ -465,6 +529,7 @@ const SessionEndedRequestHandler = {
     }
 };
 
+// Handler for the Intent Reflector, which is used to reflect the intent name back to the user
 const IntentReflectorHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest';
@@ -477,7 +542,7 @@ const IntentReflectorHandler = {
             .getResponse();
     }
 };
-
+// Error Handler to catch any errors that occur during the request processing
 const ErrorHandler = {
     canHandle() {
         return true;

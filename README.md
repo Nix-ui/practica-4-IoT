@@ -535,3 +535,7 @@
                 AND current.state.reported.securitySystem = 'armed'
                 AND current.state.reported.interiorDoor <> 'close'
             ```
+
+## Diagramas
+1. Comportamiento
+   * ![Diagrama de comportamiento](/imgs/diagrama_de_comportamiento.svg)

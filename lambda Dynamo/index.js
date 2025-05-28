@@ -2,21 +2,8 @@ import { DateTime } from 'luxon';
 const AWS = require('aws-sdk');
 const ddb = new AWS.DynamoDB.DocumentClient();
 
-// Name of the DynamoDB tables
-const THINGS_STATE_TABLE_NAME = 'IoTDeviceStates'; //Name of the DynamoDB table to store IoT device states and their last updated date
 
-// Ensure the AWS SDK is configured with the correct region
-//Handler for AWS Lambda function triggered by IoT Rule
-//Updates the state of the IoT device in the DynamoDB table
-/** 
- * @description AWS Lambda function to update the state of an IoT device in DynamoDB
- * @param {Object} event - The event object containing the IoT Rule data
- * @param {string} event.thingName - The name of the IoT device (thing)
- * @param {string} event.currentInteriorDoor - The current state of the interior door
- * @param {string} event.currentExteriorDoor - The current state of the exterior door
- * @return {Object} - The response object containing the status code and message
- * @throws {Error} - If there is an error updating the state in DynamoDB
-*/
+const THINGS_STATE_TABLE_NAME = 'IoTDeviceStates';
 exports.handler = async (event) => {
     console.log("Evento recibido de IoT Rule:", JSON.stringify(event, null, 2));
     const thingName = event.thingName;
